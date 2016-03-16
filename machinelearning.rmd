@@ -1,0 +1,6 @@
+To start of we need to load the training and testing dataset into R.
+
+```{r}
+train <- read.csv("pml-training.csv")
+test <- read.csv("pml-testing.csv")
+```
