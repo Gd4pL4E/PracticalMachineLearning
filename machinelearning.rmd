@@ -1,6 +1,9 @@
-To start of we need to load the training and testing dataset into R.
+To start of we need to load the training and testing dataset into R. We will also check the structure.
 
 ```{r}
 train <- read.csv("pml-training.csv")
 test <- read.csv("pml-testing.csv")
+str(train)
 ```
+
+It is clear that some variables are noted as factors, but should be numerical/integer.
