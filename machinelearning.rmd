@@ -1,9 +1,150 @@
-To start of we need to load the training and testing dataset into R. We will also check the structure.
+#Prediction Assignment: Performance of Weigth Lifting Exercises
+##Introduction
+
+Before starting the data analysis, we need to consider the components of a prediction:
+
+Question:
+Can we determine how well a 'unilateral dumbbell biceps curl' was done with the use of sensors?
+
+Input data/features:
+Data from sensors on the arm, forearm, belt and dumbbell.
+
+In the analysis, the algorithm and parameters will be determined and will then be evaluated using cross-validation. The out of sample error will also be determined[?].
+
+##Importing and cleaning data
+To start of we need to load the training and testing data set into R. We will also check the structure.
 
 ```{r}
-train <- read.csv("pml-training.csv")
-test <- read.csv("pml-testing.csv")
-str(train)
+#Loading needed packages
+library(caret)
+library(randomForest)
 ```
 
-It is clear that some variables are noted as factors, but should be numerical/integer.
+```{r}
+#Importing data
+data <- read.csv("pml-training.csv")
+assignment <- read.csv("pml-testing.csv")
+head(str(data))
+```
+
+It is clear that some variables are noted as factors, but should be numerical/integer. 
+
+It shouldn't matter for integers if they are numeric for the prediction we are going to do, so all the values that aren't numeric from the sensor measurements will be made numeric. Values like "" and "#DIV/0!" will be set as NA automatically.
+
+```{r}
+#For all data from sensors (columns 8 - 159, if the variable isn't numeric, 
+#we will set it as numeric)
+for (i in 8:159) {
+  if (class(data[,i]) != "numeric") {
+    data[,i] <- as.numeric(as.character(data[,i]))
+  }
+}
+
+#Same for the test dataset
+for (i in 8:159) {
+  if (class(assignment[,i]) != "numeric") {
+    assignment[,i] <- as.numeric(as.character(assignment[,i]))
+  }
+}
+```
+
+Remove columns with NA values
+
+```{r}
+#Because of the amount of data, it would be best to only keep columns with no NA 
+#because those can't be used for machine learning (and most columns with NA values 
+#seem to have over 19000, making them very useless for mahcine learning even if we 
+#try to transform it somehow)
+x <- 0
+usable <- numeric()
+for (i in 1:160) {
+  if (sum(is.na(data[,i])) == 0) {
+    x = x + 1
+    usable[x] = i
+  }
+}
+
+data <- data[,usable]
+assignment <- assignment[,usable]
+```
+
+Check if testing dataset does not include NA values when using the same columns
+
+```{r}
+x <- 0
+usable.assignment <- numeric()
+for (i in 1:60) {
+  if (sum(is.na(assignment[,i])) == 0) {
+    x = x + 1
+    usable.assignment[x] = i
+  }
+}
+
+#Since there are 60 variables left, useable.assignment should contain 60 values
+length(usable.assignment)
+```
+
+Remove first 7 columns
+
+```{r}
+#The first 7 columns contain data that we can not use as predictors
+data <- data[,8:60]
+assignment <- assignment[,8:60]
+```
+
+
+Now we create the test set before we go into preprocessing
+
+```{r}
+#Setting seed so if used again, train and test set will be the same
+set.seed(29848)
+#Putting 70% of data in train set, rest in test
+inTrain <- createDataPartition(data$classe, p = 0.7, list = FALSE)
+train <- data[inTrain,]
+test <- data[-inTrain,]
+```
+
+##Preprocessing
+
+```{r}
+#Standardizing sensor data
+preproc <- preProcess(train, method = c("center", "scale"))
+s.train <- predict(preproc, newdata = train)
+
+#Using same preprocessing for the test set and the assignment data
+s.test <- predict(preproc, newdata = test)
+s.assignment <- predict(preproc, newdata = assignment)
+```
+
+##Model selection
+
+To start, I try to use a simple model using the package "rpart" to create a tree to use to predict the "classe" variable.
+
+```{r}
+set.seed(674)
+tree <- train(classe ~ ., data = s.train, method = "rpart")
+pred <- predict(tree, newdata = s.train)
+confusionMatrix(pred, s.train$classe)
+
+pred.test <- predict(tree, newdata = s.test)
+confusionMatrix(pred.test, s.test$classe)
+```
+
+The accuracy for both the train and test is about 0.5, pretty low. Since in this assignment the prediction is more important than the interpretation, I will use random forests.
+
+```{r}
+set.seed(8188)
+#check rfcv function
+randomforest <- randomForest(classe ~ ., data = s.train, ntree = 50)
+pred <- predict(randomforest, newdata = s.train)
+confusionMatrix(pred, s.train$classe)
+
+pred.test <- predict(randomforest, newdata = s.test)
+confusionMatrix(pred.test, s.test$classe)
+```
+
+This gives us an accuracy of 1.00 in the train set and 0.9975 in the test set, meaning there is some overfitting, but even in the test set the accuracy is really high.
+
+##Cross validation
+
+##Out of sample error
