@@ -1,4 +1,4 @@
-#Prediction Assignment: Performance of Weigth Lifting Exercises
+#Prediction Assignment: Weigth Lifting Exercises
 ##Introduction
 
 Before starting the data analysis, we need to consider the components of a prediction:
@@ -9,22 +9,28 @@ Can we determine how well a 'unilateral dumbbell biceps curl' was done with the 
 Input data/features:
 Data from sensors on the arm, forearm, belt and dumbbell.
 
-In the analysis, the algorithm and parameters will be determined and will then be evaluated using cross-validation. The out of sample error will also be determined[?].
+The data will first be cleaned, before the separate data sets will be made to base our model on. Cross validation will be used to determine the out of sample error.
 
 ##Importing and cleaning data
-To start of we need to load the training and testing data set into R. We will also check the structure.
+
+First the used packages need to be loaded.
 
 ```{r}
 #Loading needed packages
+library(ggplot2)
+library(dplyr)
 library(caret)
 library(randomForest)
 ```
 
-```{r}
+To start of we need to load the give datasets into R. We will also check the structure. (Note that the train and test set will be named differently, since the "pml-testing.csv" will not be used as a test set for this project)
+
+```{r results='hide'}
 #Importing data
+#Structure of data now in .html file, since iti s a very large list
 data <- read.csv("pml-training.csv")
 assignment <- read.csv("pml-testing.csv")
-head(str(data))
+str(data)
 ```
 
 It is clear that some variables are noted as factors, but should be numerical/integer. 
@@ -48,7 +54,15 @@ for (i in 8:159) {
 }
 ```
 
-Remove columns with NA values
+Many columns contain (almost) only NA values, some of these do have some values but only for when the "new_window" variable equals "yes". Since none of this kind of data is found in the 20 observations given in the assignment dataset, these should probably be removed.
+
+```{r}
+#Only keep observations where new_window = no. Uses dplyr's filter()
+data <- filter(data, new_window == "no")
+#Also done on assignment, since processing should be equal, but we know already
+#that new_window always equals "no" here
+assignment <- filter(assignment, new_window == "no")
+```
 
 ```{r}
 #Because of the amount of data, it would be best to only keep columns with no NA 
@@ -68,7 +82,7 @@ data <- data[,usable]
 assignment <- assignment[,usable]
 ```
 
-Check if testing dataset does not include NA values when using the same columns
+Check if assignment dataset does not include NA values when using the same columns. Since it is a huge dataset, it is easier to confirm this by code.
 
 ```{r}
 x <- 0
@@ -84,7 +98,7 @@ for (i in 1:60) {
 length(usable.assignment)
 ```
 
-Remove first 7 columns
+Remove first 7 columns, since these do not include predictors.
 
 ```{r}
 #The first 7 columns contain data that we can not use as predictors
@@ -92,8 +106,13 @@ data <- data[,8:60]
 assignment <- assignment[,8:60]
 ```
 
+##Cross validation
 
-Now we create the test set before we go into preprocessing
+Cross validation was done by building a seperate test set using **createDataPartition()**. 70% of the given training set was used for the actual training set here, the other 30% as a test set to measure **the out of sampele error**. Defaults of this command were used and can be found by reading the documentation (?createDataPartition).
+
+The assignment itself is somewhat odd. We are dealing with time series, but the given test set (named "assignment" here) contains single data points of the data, not windows of a certain amount of time. Because of this random sampling was used, without use of chunks - which would be more common for time series data.
+
+Only two sets (train and test; assignment wasn't used for creating/validating the model) of the data were made. Since the assignment only asks for prediction and not interpretation, I did not try to only consider the most important predictors. When doing this, one would need a third set, but in this case it was not needed.
 
 ```{r}
 #Setting seed so if used again, train and test set will be the same
@@ -106,6 +125,8 @@ test <- data[-inTrain,]
 
 ##Preprocessing
 
+All the sensor data is centered and scaled to make sure it is as close to a normal distribution as possible. Of course, the preprocessing used for the train set will be applied on the other data sets aswell.
+
 ```{r}
 #Standardizing sensor data
 preproc <- preProcess(train, method = c("center", "scale"))
@@ -116,7 +137,7 @@ s.test <- predict(preproc, newdata = test)
 s.assignment <- predict(preproc, newdata = assignment)
 ```
 
-##Model selection
+##Model fitting
 
 To start, I try to use a simple model using the package "rpart" to create a tree to use to predict the "classe" variable.
 
@@ -134,17 +155,37 @@ The accuracy for both the train and test is about 0.5, pretty low. Since in this
 
 ```{r}
 set.seed(8188)
-#check rfcv function
+#number of trees (ntree) was arbitrarily chosen, but worked well, while keeping
+#the computing time low
 randomforest <- randomForest(classe ~ ., data = s.train, ntree = 50)
 pred <- predict(randomforest, newdata = s.train)
-confusionMatrix(pred, s.train$classe)
+cm.train <- confusionMatrix(pred, s.train$classe)
+cm.train$overall[1:2]
 
 pred.test <- predict(randomforest, newdata = s.test)
-confusionMatrix(pred.test, s.test$classe)
+cm.test <- confusionMatrix(pred.test, s.test$classe)
+cm.test$overall[1:2]
 ```
 
-This gives us an accuracy of 1.00 in the train set and 0.9975 in the test set, meaning there is some overfitting, but even in the test set the accuracy is really high.
-
-##Cross validation
+This gives us an accuracy of 1.00 in the train set and 0.9915 in the test set, meaning there is some overfitting, but even in the test set the accuracy is really high.
 
 ##Out of sample error
+
+We have seen that the accuracy and kappa value in the test set are both very high (0.9915 and 0.9892 respectively). 
+Meaning the model has a substantially small out of sample error.
+
+Heatmap
+
+```{r}
+#Taking data from the confusion matrix for the test set
+hm <- data.frame(cm.test$table)
+#Reordering the reference value, so the heatmap looks more intelligible
+hm$Reference = with(hm, factor(Reference, levels = rev(levels(Reference))))
+
+ggplot(hm, aes(Prediction, Reference, label = Freq)) + 
+  #Using the log of the frequency for the color, so low values get colored too
+  geom_tile(aes(fill = log(Freq + 1)), colour = "white") + 
+  geom_text(aes(label = Freq)) +
+  scale_fill_gradient(low = "white", high = "red", guide = "none") +
+  theme_bw()
+```
