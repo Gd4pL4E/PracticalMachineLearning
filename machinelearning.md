@@ -249,6 +249,10 @@ cm.test
 
 This gives us an accuracy of 1.00 in the train set and 0.9915 in the test set, meaning there is some over-fitting, but even in the test set the accuracy is really high.
 
+##About the algorithm
+
+Since random forests are used using randomForest()m Breiman's random forest algorithm is used for classification. Since only 50 trees are used the speed is still pretty high while the accuracy is as well. The interpretability is low, but the algorithm should predict pretty well.
+
 ##Out of sample error
 
 We have seen that the accuracy and kappa value in the test set are both very high (0.9915 and 0.9892 respectively). 
