@@ -1,4 +1,6 @@
 #Prediction Assignment: Weigth Lifting Exercises
+By: Fabian van Beveren
+
 ##Introduction
 
 Before starting the data analysis, we need to consider the components of a prediction:
@@ -24,7 +26,7 @@ library(caret)
 library(randomForest)
 ```
 
-To start of we need to load the give datasets into R. We will also check the structure. (Note that the train and test set will be named differently, since the "pml-testing.csv" will not be used as a test set for this project)
+To start of we need to load the give data sets into R. We will also check the structure. (Note that the train and test set will be named differently, since the "pml-testing.csv" will not be used as a test set for this project)
 
 
 ```r
@@ -57,7 +59,7 @@ for (i in 8:159) {
 }
 ```
 
-Many columns contain (almost) only NA values, some of these do have some values but only for when the "new_window" variable equals "yes". Since none of this kind of data is found in the 20 observations given in the assignment dataset, these should probably be removed.
+Many columns contain (almost) only NA values, some of these do have some values but only for when the "new_window" variable equals "yes". Since none of this kind of data is found in the 20 observations given in the assignment data set, these should probably be removed.
 
 
 ```r
@@ -87,7 +89,7 @@ data <- data[,usable]
 assignment <- assignment[,usable]
 ```
 
-Check if assignment dataset does not include NA values when using the same columns. Since it is a huge dataset, it is easier to confirm this by code.
+Check if assignment data set does not include NA values when using the same columns. Since it is a huge data set, it is easier to confirm this by code.
 
 
 ```r
@@ -108,7 +110,10 @@ length(usable.assignment)
 ## [1] 60
 ```
 
+##Predictors
+
 Remove first 7 columns, since these do not include predictors.
+Since the main goal of this assignment in prediction and not interpretation, all other variables will be used as predictors (all remaining sensor data). The paper about this data set (see references) does some feature selection, but also uses time windows, where here we try to assign the "classe" variable to each raw data point. 
 
 
 ```r
@@ -119,7 +124,7 @@ assignment <- assignment[,8:60]
 
 ##Cross validation
 
-Cross validation was done by building a seperate test set using **createDataPartition()**. 70% of the given training set was used for the actual training set here, the other 30% as a test set to measure **the out of sampele error**. Defaults of this command were used and can be found by reading the documentation (?createDataPartition).
+Cross validation was done by building a separate test set using **createDataPartition()**. 70% of the given training set was used for the actual training set here, the other 30% as a test set to measure **the out of sampele error**. Defaults of this command were used and can be found by reading the documentation (?createDataPartition).
 
 The assignment itself is somewhat odd. We are dealing with time series, but the given test set (named "assignment" here) contains single data points of the data, not windows of a certain amount of time. Because of this random sampling was used, without use of chunks - which would be more common for time series data.
 
@@ -137,7 +142,7 @@ test <- data[-inTrain,]
 
 ##Preprocessing
 
-All the sensor data is centered and scaled to make sure it is as close to a normal distribution as possible. Of course, the preprocessing used for the train set will be applied on the other data sets aswell.
+All the sensor data is centered and scaled to make sure it is as close to a normal distribution as possible. Of course, the preprocessing used for the train set will be applied on the other data sets as well.
 
 
 ```r
@@ -242,7 +247,7 @@ cm.test
 ## Balanced Accuracy      0.9985   0.9946   0.9906   0.9880   0.9992
 ```
 
-This gives us an accuracy of 1.00 in the train set and 0.9915 in the test set, meaning there is some overfitting, but even in the test set the accuracy is really high.
+This gives us an accuracy of 1.00 in the train set and 0.9915 in the test set, meaning there is some over-fitting, but even in the test set the accuracy is really high.
 
 ##Out of sample error
 
@@ -271,3 +276,6 @@ ggplot(hm, aes(Prediction, Reference, label = round(prop, 3))) +
 ```
 
 ![](machinelearning_files/figure-html/unnamed-chunk-12-1.png) 
+
+##References
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013. 
