@@ -1,4 +1,4 @@
-###*VIEWING THE .HTML FILE
+###VIEWING THE .HTML FILE
 Either:
 - Use this [link](https://htmlpreview.github.io/?https://github.com/Gd4pL4E/PracticalMachineLearning/blob/master/machinelearning.html) (This uses https://htmlpreview.github.io/)
 - Open the .md file (will look exactly like the .html file)
